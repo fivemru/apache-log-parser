@@ -48,11 +48,13 @@ def parse_files(files, fields, filters):
         end_parse = time.time()
         lines_total += count_lines
         filtered_total += count_filtered
-        print("[{:6.2f} s, {:10d} : (+{:10d}, -{:10d}) lines] {}".format(
-            (end_parse - start_parse),
+        _total = (end_parse - start_parse)
+        print("[{:6.2f} s, {:10d} : (+{:10d}, -{:10d}) lines, {:9.2f} l/s] {}".format(
+            _total,
             count_lines,
             (count_lines - count_filtered),
             count_filtered,
+            (count_lines / _total),
             filename,
         ))
         sys.stdout.flush()
@@ -213,11 +215,12 @@ def print_report(files, fields, filters={}):
 
     res = parse_files(files, fields, filters)
 
-    print("\nTotal\n[{:6.2f} s, {:10d} : (+{:10d}, -{:10d}) lines]\n\n".format(
+    print("\nTotal\n[{:6.2f} s, {:10d} : (+{:10d}, -{:10d}) lines, {:.2f} l/s]\n\n".format(
           res['time'],
           res['total'],
           (res['total'] - res['filtered']),
           res['filtered'],
+          (res['total'] / res['time']),
           ))
 
     print_tree(res['tree'], fields)
@@ -298,19 +301,19 @@ if __name__ == '__main__':
     # Search for anomalies
     # print_report(files, ['date', ['code', 'method', 'uri:100', 'ip:20']], {
     # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
-    # print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
-    #     'exclude': [
-    #         skip_my_ip,
-    #         # Common requests
-    #         PATT['uri:openstat'],
-    #         PATT['uri:wp_cron'],
-    #         PATT['uri:wp_static_files'],
-    #         # exclude login attempt to admin-ajax.php
-    #         {'uri': r'^/wp-admin/admin-ajax.php$'},
-    #         # site
-    #         site['site2'],
-    #     ],
-    # })
+    print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
+        'exclude': [
+            skip_my_ip,
+            # Common requests
+            PATT['uri:openstat'],
+            PATT['uri:wp_cron'],
+            PATT['uri:wp_static_files'],
+            # exclude login attempt to admin-ajax.php
+            {'uri': r'^/wp-admin/admin-ajax.php$'},
+            # site
+            site['site2'],
+        ],
+    })
 
     # Extract only important
     # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
@@ -319,10 +322,11 @@ if __name__ == '__main__':
     #     'include': {'uri': r'^/wp-admin/admin-ajax.php$'},
     # })
 
-    print_report(files, ['uri:100', ['code', 'method', 'protocol'],  'ip:20'], {
-        'exclude': [skip_my_ip],
-        'include': {'ip': r'^141.8.132.\d{1,3}$'},
-    })
+    # print_report(files, ['uri:100', ['code', 'method', 'protocol'],  'ip:20'], {
+    #     'exclude': [skip_my_ip],
+    #     'include': {'ip': r'^141.8.132.\d{1,3}$'},
+    # })
+
     sys.stdout.flush()
     sys.stdout.close()
 
