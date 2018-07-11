@@ -13,43 +13,56 @@ else:
     io_method = cStringIO.StringIO
 
 
-def parse_lines(content, fields, filters):
-    tree = {}
-    count_lines = 0
-    filtered = 0
-    start = time.time()
+def parse_files(files, fields, filters):
+    tree, lines_total, filtered_total, start = {}, 0, 0, time.time()
 
-    for line in content:
-        count_lines += 1
-        data = parse_apache_line(line)
+    for filename in files:
+        start_parse, count_lines, count_filtered = time.time(), 0, 0
 
-        if filters_pass(data, filters) == False:
-            filtered += 1
-            continue
+        with open(filename) as fp:
+            for line in fp:
+                count_lines += 1
+                data = parse_apache_line(line)
 
-        tmp = tree
+                if filters_pass(data, filters) == False:
+                    count_filtered += 1
+                    continue
 
-        for i, field in enumerate(fields):
-            isLast = True if i == len(fields) - 1 else False
-            val = ""
-            if type(field) is list:
-                for fi in field:
-                    val += format_value(fi, data)
-            else:
-                val = format_value(field, data)
+                tmp = tree
 
-            if tmp.get(val) == None:
-                tmp[val] = 0 if isLast else {}
-            if isLast:
-                tmp[val] += 1
-            tmp = tmp[val]
+                for i, field in enumerate(fields):
+                    isLast = True if i == len(fields) - 1 else False
+                    val = ""
+                    if type(field) is list:
+                        for fi in field:
+                            val += format_value(fi, data)
+                    else:
+                        val = format_value(field, data)
+
+                    if tmp.get(val) == None:
+                        tmp[val] = 0 if isLast else {}
+                    if isLast:
+                        tmp[val] += 1
+                    tmp = tmp[val]
+
+        end_parse = time.time()
+        lines_total += count_lines
+        filtered_total += count_filtered
+        print("[{:6.2f} s, {:10d} : (+{:10d}, -{:10d}) lines] {}".format(
+            (end_parse - start_parse),
+            count_lines,
+            (count_lines - count_filtered),
+            count_filtered,
+            filename,
+        ))
+        sys.stdout.flush()
 
     end = time.time()
     return {
-        'lines':        count_lines,
-        'filtered':     filtered,
-        'tree':         tree,
         'time':         (end - start),
+        'total':        lines_total,
+        'filtered':     filtered_total,
+        'tree':         tree,
     }
 
 
@@ -183,7 +196,7 @@ def print_tree(tree, fields, pad="", level=0):
             print(pad + item)
             sum += print_tree(val, fields, pad + "\t", level + 1)
         else:
-            print(pad + str(val) + "\t" + item)
+            print("{}{}\t{}".format(pad, val, item))
             sum += val
     # print("[total: " + str(sum) + "]\n")
     print
@@ -191,24 +204,23 @@ def print_tree(tree, fields, pad="", level=0):
 
 
 def print_report(files, fields, filters={}):
-    print('Group by : ', fields)
+    print('Group by : {:s}\n'.format(fields))
+    sys.stdout.flush()
 
-    #p = subprocess.Popen((["zcat"] + files), stdout=subprocess.PIPE)
-    p = subprocess.Popen((["cat"] + files), stdout=subprocess.PIPE)
-    content = io_method(p.communicate()[0])
-    assert p.returncode == 0
+    if len(files) == 0:
+        print("Files not found: {:s}".format(sys.argv[1]))
+        sys.exit(1)
 
-    res = parse_lines(content, fields, filters)
+    res = parse_files(files, fields, filters)
 
-    print
-    print("Total lines: " + str(res['lines']))
-    print("Filtered: " + str(res['filtered']))
-    print("Showing: " + str(res['lines'] - res['filtered']))
-    print("Parse time: " + str(res['time']) + "\n")
+    print("\nTotal\n[{:6.2f} s, {:10d} : (+{:10d}, -{:10d}) lines]\n\n".format(
+          res['time'],
+          res['total'],
+          (res['total'] - res['filtered']),
+          res['filtered'],
+          ))
+
     print_tree(res['tree'], fields)
-    print
-
-    content.close()
 
 
 if __name__ == '__main__':
@@ -223,14 +235,6 @@ if __name__ == '__main__':
     for filename in sys.argv[1:]:
         if os.path.isfile(filename):
             files.append(filename)
-
-    if len(files) == 0:
-        print("Files not found: ", ("\n\t".join(sys.argv[1])))
-        sys.exit(1)
-
-    print("Files (" + str(len(files)) + "): \n" + ("\n".join(files)) + "\n\n")
-
-    sys.stdout.flush()
 
     PATT = {
         'uri:openstat': {
@@ -314,7 +318,13 @@ if __name__ == '__main__':
     #     'exclude': [skip_my_ip],
     #     'include': {'uri': r'^/wp-admin/admin-ajax.php$'},
     # })
+
     print_report(files, ['uri:100', ['code', 'method', 'protocol'],  'ip:20'], {
         'exclude': [skip_my_ip],
         'include': {'ip': r'^141.8.132.\d{1,3}$'},
     })
+    sys.stdout.flush()
+    sys.stdout.close()
+
+    sys.stderr.flush()
+    sys.stderr.close()
