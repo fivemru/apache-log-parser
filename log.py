@@ -54,7 +54,7 @@ def parse_files(files, fields, filters):
             count_lines,
             (count_lines - count_filtered),
             count_filtered,
-            (count_lines / _total),
+            (count_lines / _total) if _total > 0 else 0,
             filename,
         ))
         sys.stdout.flush()
@@ -220,7 +220,7 @@ def print_report(files, fields, filters={}):
           res['total'],
           (res['total'] - res['filtered']),
           res['filtered'],
-          (res['total'] / res['time']),
+          (res['total'] / res['time']) if res['time'] > 0 else 0,
           ))
 
     print_tree(res['tree'], fields)
@@ -264,7 +264,12 @@ if __name__ == '__main__':
     }
 
     site = {
-        'site1': [
+        'site1': [      
+            # Common requests
+            PATT['uri:openstat'],
+            PATT['uri:wp_cron'],
+            PATT['uri:wp_static_files'],
+
             {'uri': r'^/(\?utm_source=[^/?#.\\]+)?$'},
             {'uri': r'(\?|&)yclid=[\d]+$'},
             {'uri': r'^/favicon\.ico$'},
@@ -281,7 +286,13 @@ if __name__ == '__main__':
             {'uri': r'^/za[a-z-]+t/?$'},
             {'uri': r'^/wp-content/uploads/[^?#.\\]+\.webp$'},
         ],
-        'site2':  [
+        'site2':  [            
+            # Common requests
+            PATT['uri:openstat'],
+            PATT['uri:wp_cron'],
+            PATT['uri:wp_static_files'],
+
+            # Pages
             {'uri': r'^/robots\.txt$'},
             {'uri': r'^/favicon\.ico$'},
             {'uri': r'^/apple[^/?#\\]+\.png$'},
@@ -296,20 +307,28 @@ if __name__ == '__main__':
             {'uri': r'^/(?:our-objects|contact|about|galery|pr[a-z-]+)/?$'},
             {'uri': r'^/(?:partners|bwg_(?:album|gallery)|accessory|installation|products)/?([^.?#\\]+(?:\.html(\?download=[\d]+|[^?#.\\]+)?|\/?))?$'},
         ],
+        'site3': [            
+            {'uri': r'^/$'},
+            {'uri': r'^/robots\.txt$'},
+            {'uri': r'^/favicon\.ico$'},
+            {'uri': r'^/css/style\.css$'},
+            {'uri': r'^/poisk[^/\\#?.]+te\.html.+'},
+            {'uri': r'^/(support|radio|music|song)(?:\.html|\/)?$'},
+            {'uri': r'^/js/[^\/?#\\]+\.js$'},
+            {'uri': r'^/(?:bio|music|song|short_story)/[^\/?#\\]+(?:\.html|\/)?$'},
+            {'uri': r'^/img/[a-z\d\-\_]+\.(?:png|jpg|gif)$'},
+        ],
     }
 
     # Search for anomalies
     # print_report(files, ['date', ['code', 'method', 'uri:100', 'ip:20']], {
     # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
+    # print_report(files, [['code', 'method', 'uri:100']], {
     print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
         'exclude': [
             skip_my_ip,
-            # Common requests
-            PATT['uri:openstat'],
-            PATT['uri:wp_cron'],
-            PATT['uri:wp_static_files'],
             # exclude login attempt to admin-ajax.php
-            {'uri': r'^/wp-admin/admin-ajax.php$'},
+            # {'uri': r'^/wp-admin/admin-ajax.php$'},
             # site
             site['site2'],
         ],
