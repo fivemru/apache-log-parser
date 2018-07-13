@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import time
+from functools import reduce
 
 if sys.version.startswith("3"):
     import io
@@ -101,8 +102,8 @@ def filters_pass(data, filters):
     return True
 
 
-def parse_apache_line(line):
-    chunk = line.split()
+def parse_apache_line(line, sep=' '):
+    chunk = line.split(sep)
     return {
         'ip':		(chunk[0]).strip(),
         'date':		(chunk[3][1:12]).strip(),
@@ -125,17 +126,13 @@ def field_param(field):
 
 
 def norm_date(date_str):
-    return '-'.join(
-        reduce(
-            lambda str, re: str.replace(
-                re[1],
-                '{0}'.format(re[0]).zfill(2)
-            ),
-            enumerate(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], 1),
-            date_str.replace('\t', '')
-        ).split('/')[::-1]
-    )
+    def replace_date(str, re):
+        return str.replace(re[1], '{}'.format(re[0]).zfill(2))
+
+    mounths = enumerate(['Jan', 'Feb', 'Mar', 'Apr', 'May',
+                         'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    replaced_date = reduce(replace_date, mounths, date_str.replace('\t', ''))
+    return '-'.join(replaced_date.split('/')[::-1])
 
 
 def format_value(field, data):
@@ -182,7 +179,7 @@ def find_and_replace(tree, fields, field, find_name, fn):
 
 def print_tree(tree, fields, pad="", level=0):
 
-    # Replace date from '10/May/2018' to '2018-05-10' for sort reason.
+    # Replace the date from '10/May/2018' to '2018-05-10' for sorting reason.
     tree = find_and_replace(
         tree,
         fields,
@@ -206,7 +203,8 @@ def print_tree(tree, fields, pad="", level=0):
 
 
 def print_report(files, fields, filters={}):
-    print('Group by : {:s}\n'.format(fields))
+    print('Group by : ', fields)
+    print()
     sys.stdout.flush()
 
     if len(files) == 0:
@@ -228,10 +226,13 @@ def print_report(files, fields, filters={}):
 
 if __name__ == '__main__':
     """
-    '">----------------------------------------------------------------------------
+    '">-----X--S--S-------------------------S--Q--L----I--N--J-E--C-T-----
+
     Hello friend!
-    This is a simple Apache log parser with the ability to group and|or filter out.
-    ----------------------------------------------------------------------------<"'
+    This is a simple Apache log parser with a flexibly ability to group 
+    entries by column and|or filter it. Set up printing as you like!
+
+    --------m--a--l--i--c--i--o--u--s----r--e--q--u--e--s--t--s--------<"'
     """
 
     files = []
@@ -239,7 +240,10 @@ if __name__ == '__main__':
         if os.path.isfile(filename):
             files.append(filename)
 
-    PATT = {
+    # FILTERS
+    # Common patterns for Wordpress cms
+    COMMON_PATTERN = {
+        # Wordpress static files and openstat label
         'uri:openstat': {
             'uri': r'/\?_openstat=',
         },
@@ -249,6 +253,7 @@ if __name__ == '__main__':
         'uri:wp_static_files': {
             'uri': r'^/(?:wp-content|wp-includes)/[^\?#]+\.(css|js|woff|ttf|eot|svg|jpg|png|gif)+(\?|\?ve?r?=[\da-f\.]+)?$',
         },
+        # Hackers shells
         'hacker:uri:scan:shells': [
             {'uri': r'\.(aasf|index\.php)'},
             {'uri': r'xo='},
@@ -263,13 +268,15 @@ if __name__ == '__main__':
         'ip': r'(?:127.0.0.1|192.168.0.1)',
     }
 
+    # Example 3 set of filters for 3 sites
     site = {
-        'site1': [      
+        'site1': [
             # Common requests
-            PATT['uri:openstat'],
-            PATT['uri:wp_cron'],
-            PATT['uri:wp_static_files'],
+            COMMON_PATTERN['uri:openstat'],
+            COMMON_PATTERN['uri:wp_cron'],
+            COMMON_PATTERN['uri:wp_static_files'],
 
+            # Site Pages
             {'uri': r'^/(\?utm_source=[^/?#.\\]+)?$'},
             {'uri': r'(\?|&)yclid=[\d]+$'},
             {'uri': r'^/favicon\.ico$'},
@@ -286,13 +293,13 @@ if __name__ == '__main__':
             {'uri': r'^/za[a-z-]+t/?$'},
             {'uri': r'^/wp-content/uploads/[^?#.\\]+\.webp$'},
         ],
-        'site2':  [            
+        'site2':  [
             # Common requests
-            PATT['uri:openstat'],
-            PATT['uri:wp_cron'],
-            PATT['uri:wp_static_files'],
+            COMMON_PATTERN['uri:openstat'],
+            COMMON_PATTERN['uri:wp_cron'],
+            COMMON_PATTERN['uri:wp_static_files'],
 
-            # Pages
+            # Site Pages
             {'uri': r'^/robots\.txt$'},
             {'uri': r'^/favicon\.ico$'},
             {'uri': r'^/apple[^/?#\\]+\.png$'},
@@ -307,7 +314,8 @@ if __name__ == '__main__':
             {'uri': r'^/(?:our-objects|contact|about|galery|pr[a-z-]+)/?$'},
             {'uri': r'^/(?:partners|bwg_(?:album|gallery)|accessory|installation|products)/?([^.?#\\]+(?:\.html(\?download=[\d]+|[^?#.\\]+)?|\/?))?$'},
         ],
-        'site3': [            
+        'site3': [
+            # Site Pages
             {'uri': r'^/$'},
             {'uri': r'^/robots\.txt$'},
             {'uri': r'^/favicon\.ico$'},
@@ -321,31 +329,45 @@ if __name__ == '__main__':
     }
 
     # Search for anomalies
-    # print_report(files, ['date', ['code', 'method', 'uri:100', 'ip:20']], {
-    # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
+
+    ## Grouping for easilly find normal requests
     # print_report(files, [['code', 'method', 'uri:100']], {
-    print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
+
+    ## Grouping for precise find normal requests
+    # print_report(files, [['code', 'method', 'uri:100'], 'ip:20'], {
+    # print_report(files, ['ip:20', ['code', 'method', 'uri:100']], {
+    # print_report(files, ['ref:20', ['code', 'method', 'uri:100']], {
+    # print_report(files, ['ua', ['code', 'method', 'uri:100']], {
+    # print_report(files, ['ua', ['ip']], {
+
+    ## Grouping for daily view
+    # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
+    # print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
+    #     'exclude': [
+    #         skip_my_ip,
+    #         # site filters
+    #         site['site1'],
+    #     ],
+    # })
+    print_report(files, ['method', 'code'], {
         'exclude': [
             skip_my_ip,
-            # exclude login attempt to admin-ajax.php
-            # {'uri': r'^/wp-admin/admin-ajax.php$'},
-            # site
-            site['site2'],
         ],
     })
 
     # Extract only important
+
     # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
     # print_report(files, [['code', 'method', 'uri:100'], 'ip:20'], {
     #     'exclude': [skip_my_ip],
-    #     'include': {'uri': r'^/wp-admin/admin-ajax.php$'},
+    #     'include': {'uri': r'^/wp-admin/admin-ajax.php'},
     # })
 
     # print_report(files, ['uri:100', ['code', 'method', 'protocol'],  'ip:20'], {
-    #     'exclude': [skip_my_ip],
-    #     'include': {'ip': r'^141.8.132.\d{1,3}$'},
+    #     'include': {'ip': r'^141.8.132.\d{1,3}$'}, # yandex bot
     # })
 
+    # Suppress an error in the terminal. (How to do better?)
     sys.stdout.flush()
     sys.stdout.close()
 
