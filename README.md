@@ -402,6 +402,6 @@ print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
 
 ## P.S.
 
-Pool requests are welcome =). Your experience is interesting.
+Pull requests are welcome =). Your experience is interesting.
 
 **Thank you for attention!**
