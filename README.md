@@ -143,21 +143,22 @@ I tested it with `2.7.15` and `3.7.0`.
         ['date', 'ip:20', ['code', 'method', 'uri:100']],
         # Exclude filters
         {
-        'exclude': [
-            # requests from my ip
-            { 'ip': r'(?:127.0.0.1|192.168.0.1)' },
-            # and exclude requests to the main page "/" and few legal requests
-            { 'uri': r'^/$' },
-            # for /about.html and /contact.html
-            { 'uri': r'^/(?:about|contact)\.html$' },
-        ],
-        # Include filters
-        'include': [
-            # For example, will find requests from bots or empty User-Agent
-            { 'ua': r'bot' },
-            { 'ua': r'^$' },
-        ]
-    })
+            'exclude': [
+                # requests from my ip
+                { 'ip': r'(?:127.0.0.1|192.168.0.1)' },
+                # and exclude requests to the main page "/" and few legal requests
+                { 'uri': r'^/$' },
+                # for /about.html and /contact.html
+                { 'uri': r'^/(?:about|contact)\.html$' },
+            ],
+            # Include filters
+            'include': [
+                # For example, will find requests from bots or empty User-Agent
+                { 'ua': r'bot' },
+                { 'ua': r'^$' },
+            ]
+        }
+    )
 ```
 
 ## How it works?
