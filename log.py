@@ -198,17 +198,17 @@ def print_tree(tree, fields, pad="", level=0):
             print("{}{}\t{}".format(pad, val, item))
             sum += val
     # print("[total: " + str(sum) + "]\n")
-    print
+    print()
     return sum
 
 
 def print_report(files, fields, filters={}):
-    print('Group by : ', fields)
+    print('\n---------\nGroup by : ', fields)
     print()
     sys.stdout.flush()
 
     if len(files) == 0:
-        print("Files not found: {:s}".format(sys.argv[1]))
+        print("Files not found: {:s}".format(*sys.argv))
         sys.exit(1)
 
     res = parse_files(files, fields, filters)
@@ -222,6 +222,31 @@ def print_report(files, fields, filters={}):
           ))
 
     print_tree(res['tree'], fields)
+
+def get_choice(choice_str, list_of_choices, default_num=None):
+    choices = list(enumerate(list_of_choices, 1))
+    num, choice = choices[default_num - 1] if default_num != None else (0, None)
+    while True:
+        print(choice_str)
+        print("\n\t(Default value is:", choice, ")")
+        for num, name in choices:
+            print("\t{}) {}".format(num, name))
+        print("Press Enter for use default value...")
+        try:
+            index = int(input())
+            if index < len(choices) and index > -len(choices):
+                if index > 0:
+                    index -= 1
+                num, setlected_set = choices[index]
+                choice = setlected_set
+                break
+        except:
+            break
+    print("\nValue is: ", choice)
+    print("\n\n")
+    if type(list_of_choices) is dict and choice != None:
+        choice = list_of_choices[choice]
+    return choice
 
 
 if __name__ == '__main__':
@@ -328,30 +353,42 @@ if __name__ == '__main__':
         ],
     }
 
-    # Search for anomalies
+    group_set = [
+        ['ip'],
+        ['date'],
+        ['uri'],
+        ['ua'],
+        ['ref'],
+        #
+        ['date', 'ip'],
+        ['date', 'uri'],
+        ['date', 'ua'],
+        ['date', 'ref'],
+        #
+        [['code', 'method', 'uri:100']],
+        # Grouping for precise find normal requests
+        [['code', 'method', 'uri:100'], 'ip:20'],
+        ['ip:20', ['code', 'method', 'uri:100']],
+        ['ref:50', ['code', 'method', 'uri:100']],
+        ['ref:50', ['code', 'method', 'uri:100'], 'ip:20'],
+        ['ua', ['code', 'method', 'uri:100']],
+        ['ua', ['ip']],
+        # Grouping for daily view
+        ['date', ['code', 'method', 'uri:100'], 'ip:20'],
+        ['date', 'ip:20', ['code', 'method', 'uri:100']],
+    ]
 
-    ## Grouping for easilly find normal requests
-    # print_report(files, [['code', 'method', 'uri:100']], {
+    # Select groups
+    groups = get_choice("=== Select columns for grouping:", group_set, 3)
+    # sys.exit(0)
 
-    ## Grouping for precise find normal requests
-    # print_report(files, [['code', 'method', 'uri:100'], 'ip:20'], {
-    # print_report(files, ['ip:20', ['code', 'method', 'uri:100']], {
-    # print_report(files, ['ref:20', ['code', 'method', 'uri:100']], {
-    # print_report(files, ['ua', ['code', 'method', 'uri:100']], {
-    # print_report(files, ['ua', ['ip']], {
+    # Select filters
+    filters = get_choice("=== Select set of exclude filters:", site)
 
-    ## Grouping for daily view
-    # print_report(files, ['date', ['code', 'method', 'uri:100'], 'ip:20'], {
-    # print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
-    #     'exclude': [
-    #         skip_my_ip,
-    #         # site filters
-    #         site['site1'],
-    #     ],
-    # })
-    print_report(files, ['method', 'code'], {
+    print_report(files, groups, {
         'exclude': [
             skip_my_ip,
+            filters,
         ],
     })
 
