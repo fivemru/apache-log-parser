@@ -396,7 +396,7 @@ print_report(files, ['date', 'ip:20', ['code', 'method', 'uri:100']], {
 
 ## To do
 
-- [ ]  Make it convenient to switch groups
+- [x]  Make it convenient to switch groups and filters
 - [ ]  `*.gz` and `*.log` files together
 
 
