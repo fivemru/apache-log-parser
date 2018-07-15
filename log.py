@@ -130,7 +130,7 @@ def norm_date(date_str):
         return str.replace(re[1], '{}'.format(re[0]).zfill(2))
 
     mounths = enumerate(['Jan', 'Feb', 'Mar', 'Apr', 'May',
-                         'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+                         'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], 1)
     replaced_date = reduce(replace_date, mounths, date_str.replace('\t', ''))
     return '-'.join(replaced_date.split('/')[::-1])
 
@@ -379,7 +379,7 @@ if __name__ == '__main__':
     ]
 
     # Select groups
-    groups = get_choice("=== Select columns for grouping:", group_set, 3)
+    groups = get_choice("=== Select columns for grouping:", group_set, 7)
     # sys.exit(0)
 
     # Select filters
