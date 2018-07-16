@@ -197,7 +197,7 @@ def print_tree(tree, fields, pad="", level=0):
         else:
             print("{}{}\t{}".format(pad, val, item))
             sum += val
-    # print("[total: " + str(sum) + "]\n")
+    print(pad + "... total: " + str(sum) + "\n")
     print()
     return sum
 
@@ -234,7 +234,7 @@ def get_choice(choice_str, list_of_choices, default_num=None):
         print("Press Enter for use default value...")
         try:
             index = int(input())
-            if index < len(choices) and index > -len(choices):
+            if index <= len(choices) and index > -len(choices):
                 if index > 0:
                     index -= 1
                 num, setlected_set = choices[index]
@@ -363,6 +363,8 @@ if __name__ == '__main__':
         ['date', 'ip'],
         ['date', 'uri'],
         ['date', 'ua'],
+        ['date', 'uri', 'ua'],
+        ['date', 'uri', ['ua:50', 'ip:20']],
         ['date', 'ref'],
         #
         [['code', 'method', 'uri:100']],
@@ -376,10 +378,11 @@ if __name__ == '__main__':
         # Grouping for daily view
         ['date', ['code', 'method', 'uri:100'], 'ip:20'],
         ['date', 'ip:20', ['code', 'method', 'uri:100']],
+        ['date', 'ip:20', ['code', 'method', 'uri:100', 'ref']],
     ]
 
     # Select groups
-    groups = get_choice("=== Select columns for grouping:", group_set, 7)
+    groups = get_choice("=== Select columns for grouping:", group_set, 10)
     # sys.exit(0)
 
     # Select filters
