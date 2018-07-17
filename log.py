@@ -112,7 +112,7 @@ def parse_apache_line(line, sep=' '):
         'uri':		(chunk[6] if len(chunk) >= 6 else "").strip(),
         'protocol':	(chunk[7][:-1] if len(chunk) >= 7 else "").strip(),
         'request':	(chunk[5][1:]+" "+chunk[6]+" "+chunk[7][:-1] if len(chunk) >= 7 else "").strip(),
-        'ua':		(' '.join(chunk[11:])[1:-1] if len(chunk) >= 11 else "").strip(),
+        'ua':		(' '.join(chunk[11:]).strip()[1:-1] if len(chunk) >= 11 else ""),
         'ref':		(chunk[10][1:-1] if len(chunk) >= 11 else "").strip(),
     }
 
