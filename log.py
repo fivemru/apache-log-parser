@@ -93,10 +93,10 @@ def filters_pass(data, filters):
 
         return False
 
-    if filters.get('exclude') != None and rules_pass(filters['exclude']) == True:
+    if bool(filters.get('exclude')) and rules_pass(filters['exclude']) == True:
         return False
 
-    if filters.get('include') != None and rules_pass(filters['include']) == False:
+    if bool(filters.get('include')) and rules_pass(filters['include']) == False:
         return False
 
     return True
@@ -203,7 +203,8 @@ def print_tree(tree, fields, pad="", level=0):
 
 
 def print_report(files, fields, filters={}):
-    print('\n---------\nGroup by : ', fields)
+    print('\n---------\nGroup by : ', fields,  '\n---------\n')
+    print('---------\nFilters : ', filters, '\n---------\n')
     print()
     sys.stdout.flush()
 
@@ -223,30 +224,58 @@ def print_report(files, fields, filters={}):
 
     print_tree(res['tree'], fields)
 
+
 def get_choice(choice_str, list_of_choices, default_num=None):
     choices = list(enumerate(list_of_choices, 1))
-    num, choice = choices[default_num - 1] if default_num != None else (0, None)
+    include, exclude = [], []
+
+    def parse_choice(inpt):
+        user_unput = inpt.split('!')
+        index = int(user_unput[1]) if len(user_unput) == 2 else int(user_unput[0])
+        if index == '':
+            raise Exception('Enter was pressed')
+        if index <= len(choices) and index > -len(choices):
+            if index > 0:
+                index -= 1
+            num, setlected_set = choices[index]
+            # choice = setlected_set
+            if len(user_unput) == 2:
+                exclude.append(setlected_set)
+            else:
+                include.append(setlected_set)
+        else:
+            return False
+        return True
+
     while True:
         print(choice_str)
-        print("\n\t(Default value is:", choice, ")")
+        print("\n\t(Default num is:", default_num, ")")
         for num, name in choices:
             print("\t{}) {}".format(num, name))
         print("Press Enter for use default value...")
+
         try:
-            index = int(input())
-            if index <= len(choices) and index > -len(choices):
-                if index > 0:
-                    index -= 1
-                num, setlected_set = choices[index]
-                choice = setlected_set
+            if parse_choice(input()) == True:
                 break
         except:
+            print("Default setting")
+            if default_num != None:
+                parse_choice(str(default_num))
             break
-    print("\nValue is: ", choice)
+
+    print("\nValues is: exclude = ", exclude, "include=", include)
     print("\n\n")
-    if type(list_of_choices) is dict and choice != None:
-        choice = list_of_choices[choice]
-    return choice
+
+    def list_cases(arr):
+        if type(list_of_choices) is dict and len(arr) > 0:
+            for i, v in enumerate(arr):
+                arr[i] = list_of_choices[v]
+        return arr
+ 
+    return {
+        'include': list_cases(include),
+        'exclude': list_cases(exclude),
+    }
 
 
 if __name__ == '__main__':
@@ -351,6 +380,9 @@ if __name__ == '__main__':
             {'uri': r'^/(?:bio|music|song|short_story)/[^\/?#\\]+(?:\.html|\/)?$'},
             {'uri': r'^/img/[a-z\d\-\_]+\.(?:png|jpg|gif)$'},
         ],
+        'hide bot': [
+            {'ua': r'bot|scan'},
+        ],
     }
 
     group_set = [
@@ -386,13 +418,12 @@ if __name__ == '__main__':
     # sys.exit(0)
 
     # Select filters
-    filters = get_choice("=== Select set of exclude filters:", site)
+    filters = get_choice(
+        "=== Select set of exclude filters (!num for include):", site)
 
-    print_report(files, groups, {
-        'exclude': [
-            skip_my_ip,
-            filters,
-        ],
+    print_report(files, groups['include'][0], {
+        'exclude': ([skip_my_ip] + filters['include']),
+        'include': filters['exclude'],
     })
 
     # Extract only important
